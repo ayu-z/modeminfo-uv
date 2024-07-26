@@ -32,18 +32,19 @@ typedef struct {
     int header_type;
 } http_requests_t;
 
-#if 0
+#if 1
 typedef struct {
     const char *url;
     void* (*request_handler)(void *);
     json_t* (*pack_handler)(void *);
 } url_handler_t;
-#endif
+#else
 typedef struct {
     const char *url;
     void* (*request_handler)(void);
     json_t* (*pack_handler)(void *);
 } url_handler_t;
+#endif
 
 void on_new_connection(uv_stream_t* server, int status);
 void proc_post_request(app_sched_t* work);

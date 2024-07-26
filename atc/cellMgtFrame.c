@@ -33,6 +33,8 @@ static signal_t *defaultRequestGetDeviceNetSignal(void);
 static cellinfo_t *defaultRequestGetDeviceNetCellInfo(void);
 static int defaultRequestGetDeviceEtherNetMode(void);
 static char *defaultRequestGetDeviceAtRaw(const char *cmd);
+static char *defaultRequestGetDeviceNetWorkSearchPref(void);
+static char *defaultRequestSetDeviceNetWorkSearchPref(const char *pref);
 static char *defaultRequestGetDeviceSupportBandList(void);
 
 const cellMgtFrame_t default_atc_request_ops = {
@@ -52,6 +54,8 @@ const cellMgtFrame_t default_atc_request_ops = {
     .requestGetDeviceNetSignal = defaultRequestGetDeviceNetSignal,
     .requestGetDeviceNetCellInfo = defaultRequestGetDeviceNetCellInfo,
     .requestGetDeviceEtherNetMode = defaultRequestGetDeviceEtherNetMode,
+    .requestGetDeviceNetWorkSearchPref = defaultRequestGetDeviceNetWorkSearchPref,
+    .requestSetDeviceNetWorkSearchPref = defaultRequestSetDeviceNetWorkSearchPref,
     .requestGetDeviceAtRaw = defaultRequestGetDeviceAtRaw,
     .requestGetDeviceSupportBandList = defaultRequestGetDeviceSupportBandList,
 };
@@ -713,35 +717,35 @@ cellinfo_t *defaultRequestGetDeviceNetCellInfo(void){
         else if (!strcmp(rat, "LTE"))
         {
             //+QENG: "LTE",<is_tdd>,<MCC>,<MNC>,<cellID>,<PCID>,<earfcn>,<freq_band_ind>,<UL_bandwidth>,<DL_bandwidth>,<TAC>,<RSRP>,<RSRQ>,<RSSI>,<SINR>,<CQI>,<tx_power>,<srxlev>
-            if (!strcmp(rat, state)){
-                err = at_tok_scanf(p_cur->line, "%s%s%s%s%s%d%d%d%d%d%d%x%d%d%d%d%d%d%d",
-                    NULL, NULL, NULL, NULL, &cellID, &pcid, 
-                    NULL, NULL, &ul_bandwidth, &dl_bandwidth, 
-                    NULL, NULL, NULL, NULL, 
-                    NULL, NULL, NULL, NULL, NULL);
+            // if (!strcmp(rat, state)){
+            //     err = at_tok_scanf(p_cur->line, "%s%s%s%s%s%d%d%d%d%d%d%x%d%d%d%d%d%d%d",
+            //         NULL, NULL, NULL, NULL, &cellID, &pcid, 
+            //         NULL, NULL, &ul_bandwidth, &dl_bandwidth, 
+            //         NULL, NULL, NULL, NULL, 
+            //         NULL, NULL, NULL, NULL, NULL);
 
-                if (err >= 18) {
-                    p_cellinfo->cellID = cellID;
-                    p_cellinfo->pcid = pcid;
-                    p_cellinfo->DL_bandwidth = DLUL_bandwidth2String(dl_bandwidth);
-                    p_cellinfo->UL_bandwidth = DLUL_bandwidth2String(ul_bandwidth);
-                }
+            //     if (err >= 18) {
+            //         p_cellinfo->cellID = cellID;
+            //         p_cellinfo->pcid = pcid;
+            //         p_cellinfo->DL_bandwidth = DLUL_bandwidth2String(dl_bandwidth);
+            //         p_cellinfo->UL_bandwidth = DLUL_bandwidth2String(ul_bandwidth);
+            //     }
 
-            }else{
-                 err = at_tok_scanf(p_cur->line, "%s%s%s%s%s%s%d%d%d%d%d%d%x%d%d%d%d%d%d%d",
-                    NULL, NULL, NULL, NULL, NULL, NULL, &cellID, 
-                    &pcid, NULL, &band, &ul_bandwidth, 
-                    &dl_bandwidth, NULL, NULL, NULL, 
-                    NULL, NULL, NULL, NULL, NULL);
+            // }else{
+            //      err = at_tok_scanf(p_cur->line, "%s%s%s%s%s%s%d%d%d%d%d%d%x%d%d%d%d%d%d%d",
+            //         NULL, NULL, NULL, NULL, NULL, NULL, &cellID, 
+            //         &pcid, NULL, &band, &ul_bandwidth, 
+            //         &dl_bandwidth, NULL, NULL, NULL, 
+            //         NULL, NULL, NULL, NULL, NULL);
 
-                if (err >= 18) {
-                    p_cellinfo->band = band;
-                    p_cellinfo->cellID = cellID;
-                    p_cellinfo->pcid = pcid;
-                    p_cellinfo->DL_bandwidth = DLUL_bandwidth2String(dl_bandwidth);
-                    p_cellinfo->UL_bandwidth = DLUL_bandwidth2String(ul_bandwidth);
-                }
-            }
+            //     if (err >= 18) {
+            //         p_cellinfo->band = band;
+            //         p_cellinfo->cellID = cellID;
+            //         p_cellinfo->pcid = pcid;
+            //         p_cellinfo->DL_bandwidth = DLUL_bandwidth2String(dl_bandwidth);
+            //         p_cellinfo->UL_bandwidth = DLUL_bandwidth2String(ul_bandwidth);
+            //     }
+            // }
             
         }
     }
@@ -763,6 +767,43 @@ int defaultRequestGetDeviceEtherNetMode(void){
     }
     safe_at_response_free(p_response);
     return en;
+}
+
+char *defaultRequestGetDeviceNetWorkSearchPref(void){
+    char *tmp = "AUTO";
+    ATResponse *p_response = NULL;
+
+    int err = at_send_command_singleline("AT+QNWPREFCFG=\"mode_pref\"", "+QNWPREFCFG: \"mode_pref\"", &p_response);
+    if (!at_response_error(err, p_response)){
+        if(at_tok_scanf(p_response->p_intermediates->line, "%s%s", NULL, &tmp) == 2){
+            safe_at_response_free(p_response);
+            return tmp;
+        }
+    }
+    return tmp;
+}
+
+char *defaultRequestSetDeviceNetWorkSearchPref(const char *pref){
+    char *result = "FAILURE";
+    
+    if (pref == NULL || strlen(pref) == 0) {
+        return result;
+    }
+    int err = 0;
+    char cmd[32] = {0};
+    ATResponse *p_response = NULL;
+    if((strcmp(pref, "AUTO") == 0) || (strcmp(pref, "LTE") == 0) || (strcmp(pref, "NR5G") == 0)){
+        at_send_command("AT+CFUN=0",NULL);
+        sprintf(cmd, "AT+QNWPREFCFG=\"mode_pref\",%s", pref);
+        err = at_send_command(cmd, &p_response);
+        if (!at_response_error(err, p_response)){
+            result = "SUCCESS";
+        }
+        at_send_command("AT+CFUN=1",NULL);
+    }
+    safe_at_response_free(p_response);
+    LOGD("Set network search preference %s: %s", pref, result);
+    return result;
 }
 
 void defaultAtcRequestOpsInit(void){

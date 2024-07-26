@@ -95,8 +95,8 @@ typedef struct {
     int (*requestGetDeviceEtherNetMode)(void);
     char *(*requestGetDeviceAtRaw)(const char *cmd);
 
-    char *(*requestGetDeviceModePref)(void);
-    char *(*requestSetDeviceModePref)(const char *mode);
+    char *(*requestGetDeviceNetWorkSearchPref)(void);
+    char *(*requestSetDeviceNetWorkSearchPref)(const char *pref);
 
     char *(*requestGetDeviceSupportBandList)(void);
     char *(*requestGetDeviceLockBand)(void);

@@ -41,7 +41,7 @@
 #define NUM_ELEMS(x) (sizeof(x)/sizeof(x[0]))
 
 #define MAX_AT_RESPONSE sizeof(cm_recv_buf)
-#define HANDSHAKE_RETRY_COUNT 10
+#define HANDSHAKE_RETRY_COUNT 4
 #define HANDSHAKE_TIMEOUT_MSEC 1000
 
 static pthread_t s_tid_reader;
@@ -517,6 +517,7 @@ static const char *readline()
             p_read += count;
         } else if (count <= 0) {
             /* read error encountered or EOF reached */
+            at_close();
             if(count == 0) {
                 LOGD("atchannel: EOF reached");
             } else {
@@ -559,7 +560,15 @@ static void onReaderClosed()
             close(s_fd);
         }
         s_fd = -1;
+        exit(0);
+    }else{
+        if (s_fd >= 0) {
+            close(s_fd);
+        }
+        s_fd = -1;
+        exit(0);
     }
+    
 }
 
 
@@ -999,7 +1008,7 @@ void at_close()
 
     pthread_mutex_lock(&cm_command_mutex);
 
-    s_readerClosed = 1;
+    s_readerClosed = 0;
 
     pthread_cond_signal(&cm_command_cond);
 

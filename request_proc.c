@@ -143,13 +143,14 @@ static json_t *pack_atraw_json(const char *input) {
         return NULL;
     }
     json_t *s_root = json_object();
-    json_t* value = json_object_get(root, "cmd");
+    json_t* value = json_object_get(root, "data");
     if (json_is_string(value)) {  
         char *raw = cmf.requestGetDeviceAtRaw(json_string_value(value));
         json_t *arr = fmt_raw2json(raw);
         json_object_set_new(s_root, "cmd", value);
         json_object_set_new(s_root, "response", arr);
     }
+    // json_decref(root);
     return s_root;
 }
 
@@ -171,6 +172,7 @@ void proc_get_request(app_sched_t* work) {
         {"imsi", (void* (*)())cmf.requestGetDeviceSIMIMSI, NULL},
         {"simnum", (void* (*)())cmf.requestGetDeviceSIMNUM, NULL},
         {"supportband", (void* (*)())cmf.requestGetDeviceSupportBandList, (json_t* (*)(void *))pack_band_json},
+        {"networksearchpref", (void* (*)())cmf.requestGetDeviceNetWorkSearchPref, NULL},
         {NULL, NULL, NULL}
     };
 
@@ -181,7 +183,7 @@ void proc_get_request(app_sched_t* work) {
         int found = 0;
         for (int i = 0; handlers[i].url != NULL; i++) {
             if (strcasecmp(handlers[i].url, url_prefix) == 0) {
-                void *data = handlers[i].request_handler();
+                void *data = handlers[i].request_handler(NULL);
                 if (handlers[i].pack_handler) {
                     s_json = handlers[i].pack_handler(data);
                 } else {
@@ -257,24 +259,40 @@ void proc_post_request(app_sched_t* work) {
 void proc_post_request(app_sched_t* work) {
     
     url_handler_t post_handlers[] = {
-        {"atraw", (void* (*)(void))cmf.requestGetDeviceAtRaw, (json_t* (*)(void *))pack_atraw_json},
+        {"atraw", (void* (*)(void*))cmf.requestGetDeviceAtRaw, (json_t* (*)(void *))pack_atraw_json},
+        {"networksearchpref", (void* (*)(void*))cmf.requestSetDeviceNetWorkSearchPref, NULL},
         {NULL, NULL, NULL}
     };
 
     char *url_prefix;
     at_tok_by_index_scanf(work->url_path, "/", -1, "%s", &url_prefix);
     if ((strncmp(work->url_path, "/api/set/", 8) == 0) && (url_prefix != NULL)) {
-        json_t *s_json;
+        json_t *s_json = json_object();
         int found = 0;
+        char *result = NULL;
         for (int i = 0; post_handlers[i].url != NULL; i++) {
             if (strcmp(post_handlers[i].url, url_prefix) == 0) {
-                // void *data = post_handlers[i].request_handler();
-                s_json = post_handlers[i].pack_handler(work->data);
+                if (strcasecmp(url_prefix, "atraw") == 0) {
+                    s_json = post_handlers[i].pack_handler(work->data);
+                } else {
+                    json_error_t error;
+                    json_t* root = json_loads(work->data, 0, &error);
+                    json_t* value = json_object_get(root, "data");
+                    result = post_handlers[i].request_handler((void *)json_string_value(value));
+                    if (post_handlers[i].pack_handler) {
+                        s_json = post_handlers[i].pack_handler(result);
+                    }else {
+                        json_object_set_new(s_json, url_prefix, json_string(result));
+                    }
+                    json_decref(root);
+                    free(result);
+                    json_decref(value);
+                }
                 found = 1;
                 break;
             }
         }
-
+        
         if (!found) {
             work->response_data = strdup("{\"err\": \"invalid url\"}");
         } else {
@@ -292,8 +310,9 @@ int prco_request_init(char *dev){
     int ret = at_open(dev, NULL, 0);
     if(ret < 0) return ret;
     if(at_handshake() != 0 ) {
+        LOGE("atCom handshake failed\n");
         at_close();
-        return -1;
+        exit(EXIT_FAILURE);
     }
     cmf = createAtcRequestOps();
     cmf.atcRequestOpsInit();
