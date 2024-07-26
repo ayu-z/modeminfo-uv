@@ -1,0 +1,14 @@
+port=`cat /var/run/cellmgt`
+cmds='ATI AT+CGDCONT? AT+CGPADDR AT+CGREG AT+CREG AT+CPIN? ATC'
+# post=$(curl -sX POST -H "Content-Type: application/json" -d "{\"iccid\": \"${iccid}\"}" http://localhost:${port}/api/set/iccid)
+
+types="gmi gmm gmr gsn temperature simstatus simslot iccid imsi simnum netisp sysinfo signal cellinfo ethernet supportband"
+for t in $types;do
+    get=$(curl -sX GET http://localhost:${port}/api/get/${t})
+    [ -n "$get" ] && echo "$get"
+done
+
+for c in $cmds;do
+    post=$(curl -sX POST -H "Content-Type: application/json" -d "{\"cmd\": \"${c}\"}" http://localhost:${port}/api/set/atraw)
+    [ -n "$post" ] && echo  "$post"
+done
