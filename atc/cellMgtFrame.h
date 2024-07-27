@@ -3,6 +3,10 @@
 
 #include <jansson.h>
 
+#define MAX_BANDS 32
+#define MAX_BAND_LENGTH 4
+#define MAX_STRING_LENGTH (MAX_BANDS * (MAX_BAND_LENGTH + 1))
+
 #define INVALID "N/A"
 #define INVALID_IPV4 "0.0.0.0"
 #define INVALID_IPV6 "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0"
@@ -85,6 +89,7 @@ typedef struct {
     char *(*requestGetDeviceTemperature)(void);
     char *(*requestGetDeviceSIMStatus)(void);
     char *(*requestGetDeviceSIMSlot)(void);
+    char *(*requestSetDeviceSIMSlot)(const char *slot);
     char *(*requestGetDeviceSIMICCID)(void);
     char *(*requestGetDeviceSIMIMSI)(void);
     isp_t *(*requestGetDeviceNetISP)(void);
@@ -94,10 +99,8 @@ typedef struct {
     cellinfo_t *(*requestGetDeviceNetCellInfo)(void);
     int (*requestGetDeviceEtherNetMode)(void);
     char *(*requestGetDeviceAtRaw)(const char *cmd);
-
     char *(*requestGetDeviceNetWorkSearchPref)(void);
     char *(*requestSetDeviceNetWorkSearchPref)(const char *pref);
-
     char *(*requestGetDeviceSupportBandList)(void);
     char *(*requestGetDeviceLockBand)(void);
     char *(*requestSetDeviceLockBand)(const char *band);

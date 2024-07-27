@@ -125,6 +125,94 @@ static json_t *pack_band_json(const char *input) {
     return s_root;
 }
 
+static void fmt_bands2json(const char *band_str, json_t *json_array, const char *prefix) {
+    char cleaned_band_str[MAX_TOKEN_LENGTH * MAX_BANDS];
+    strncpy(cleaned_band_str, band_str, sizeof(cleaned_band_str) - 1);
+    cleaned_band_str[sizeof(cleaned_band_str) - 1] = '\0';
+
+    char *src = cleaned_band_str, *dst = cleaned_band_str;
+    while (*src) {
+        if (*src != ',' && *src != '-') {
+            *dst++ = *src;
+        }
+        src++;
+    }
+    *dst = '\0';
+    char *token = strtok(cleaned_band_str, ":");
+    while (token != NULL) {
+        char band_with_prefix[MAX_TOKEN_LENGTH];
+        snprintf(band_with_prefix, MAX_TOKEN_LENGTH, "%s%s", prefix, token);
+        json_array_append_new(json_array, json_string(band_with_prefix));
+        token = strtok(NULL, ":");
+    }
+}
+
+static json_t *pack_getlockband_json(const char *input) {
+    if(input == NULL) 
+        return NULL;
+    json_t *root = json_object();
+    json_t *s_root = json_object();
+    json_t *lte_array = json_array();
+    json_t *nr5g_array = json_array();
+
+    char *str_copy = strdup(input);
+    char *lte_line = strtok(str_copy, "\n");
+    char *nr5g_line = strtok(NULL, "\n");
+
+    if (lte_line && strstr(lte_line, "lte_band=")) {
+        char *lte_start = strchr(lte_line, '=') + 1; 
+        fmt_bands2json(lte_start, lte_array, "B");
+    }
+
+    if (nr5g_line && strstr(nr5g_line, "nr5g_band=")) {
+        char *nr5g_start = strchr(nr5g_line, '=') + 1; 
+        fmt_bands2json(nr5g_start, nr5g_array, "N");
+    }
+
+    json_object_set_new(s_root, "lte bands", lte_array);
+    json_object_set_new(s_root, "nr5g bands", nr5g_array);
+    json_object_set_new(root, "current lockband", s_root);
+    return root;
+}
+
+
+static json_t *pack_lockstatus_json(const char *input) {
+    char lte[MAX_STRING_LENGTH] = {0};
+    char nr5g[MAX_STRING_LENGTH] = {0};
+
+    const char *lte_prefix = "lte=";
+    const char *nr5g_prefix = "nr5g=";
+
+    const char *lte_pos = strstr(input, lte_prefix);
+    const char *nr5g_pos = strstr(input, nr5g_prefix);
+
+    if (lte_pos) {
+        lte_pos += strlen(lte_prefix);
+        const char *lte_end = strchr(lte_pos, ',');
+        if (lte_end) {
+            strncpy(lte, lte_pos, lte_end - lte_pos);
+            lte[lte_end - lte_pos] = '\0';
+        } else {
+            strncpy(lte, lte_pos, MAX_STRING_LENGTH - 1);
+            lte[MAX_STRING_LENGTH - 1] = '\0';
+        }
+    }
+
+    if (nr5g_pos) {
+        nr5g_pos += strlen(nr5g_prefix);
+        strncpy(nr5g, nr5g_pos, MAX_STRING_LENGTH - 1);
+        nr5g[MAX_STRING_LENGTH - 1] = '\0';
+    }
+
+    json_t *s_root = json_object();
+    json_object_set_new(s_root, "set lte", json_string(lte));
+    json_object_set_new(s_root, "set nr5g", json_string(nr5g));
+
+    json_t *root = json_object();
+    json_object_set_new(root, "lockband", s_root);
+
+    return root;
+}
 #if 0
 static json_t *pack_atraw_json(const char *input) {
     return fmt_raw2json(input);;
@@ -173,6 +261,7 @@ void proc_get_request(app_sched_t* work) {
         {"simnum", (void* (*)())cmf.requestGetDeviceSIMNUM, NULL},
         {"supportband", (void* (*)())cmf.requestGetDeviceSupportBandList, (json_t* (*)(void *))pack_band_json},
         {"networksearchpref", (void* (*)())cmf.requestGetDeviceNetWorkSearchPref, NULL},
+        {"lockband", (void* (*)())cmf.requestGetDeviceLockBand, (json_t* (*)(void *))pack_getlockband_json},
         {NULL, NULL, NULL}
     };
 
@@ -261,6 +350,8 @@ void proc_post_request(app_sched_t* work) {
     url_handler_t post_handlers[] = {
         {"atraw", (void* (*)(void*))cmf.requestGetDeviceAtRaw, (json_t* (*)(void *))pack_atraw_json},
         {"networksearchpref", (void* (*)(void*))cmf.requestSetDeviceNetWorkSearchPref, NULL},
+        {"lockband", (void* (*)(void*))cmf.requestSetDeviceLockBand, (json_t* (*)(void *))pack_lockstatus_json},
+        {"simswitch", (void* (*)(void*))cmf.requestSetDeviceSIMSlot, NULL},
         {NULL, NULL, NULL}
     };
 
@@ -278,14 +369,18 @@ void proc_post_request(app_sched_t* work) {
                     json_error_t error;
                     json_t* root = json_loads(work->data, 0, &error);
                     json_t* value = json_object_get(root, "data");
-                    result = post_handlers[i].request_handler((void *)json_string_value(value));
+                    char *json2strings = NULL;
+                    if(json_is_object(value))
+                        json2strings = json_dumps(value, JSON_INDENT(0));
+                    else if (json_is_string(value))
+                        json2strings = (char *)json_string_value(value);
+                    result = post_handlers[i].request_handler((void *)json2strings);
                     if (post_handlers[i].pack_handler) {
                         s_json = post_handlers[i].pack_handler(result);
                     }else {
                         json_object_set_new(s_json, url_prefix, json_string(result));
                     }
                     json_decref(root);
-                    free(result);
                     json_decref(value);
                 }
                 found = 1;

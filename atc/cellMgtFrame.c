@@ -24,6 +24,7 @@ static char *defaultRequestGetDeviceGSN(void);
 static char *defaultRequestGetDeviceTemperature(void);
 static char *defaultRequestGetDeviceSIMStatus(void);
 static char *defaultRequestGetDeviceSIMSlot(void);
+static char *defaultRequestSetDeviceSIMSlot(const char *slot);
 static char *defaultRequestGetDeviceSIMICCID(void);
 static char *defaultRequestGetDeviceSIMIMSI(void);
 static isp_t *defaultRequestGetDeviceNetISP(void);
@@ -36,6 +37,8 @@ static char *defaultRequestGetDeviceAtRaw(const char *cmd);
 static char *defaultRequestGetDeviceNetWorkSearchPref(void);
 static char *defaultRequestSetDeviceNetWorkSearchPref(const char *pref);
 static char *defaultRequestGetDeviceSupportBandList(void);
+static char *defaultRequestGetDeviceLockBand(void);
+static char *defaultRequestSetDeviceLockBand(const char *band);
 
 const cellMgtFrame_t default_atc_request_ops = {
     .atcRequestOpsInit = defaultAtcRequestOpsInit,
@@ -46,6 +49,7 @@ const cellMgtFrame_t default_atc_request_ops = {
     .requestGetDeviceTemperature = defaultRequestGetDeviceTemperature,
     .requestGetDeviceSIMStatus = defaultRequestGetDeviceSIMStatus,
     .requestGetDeviceSIMSlot = defaultRequestGetDeviceSIMSlot,
+    .requestSetDeviceSIMSlot = defaultRequestSetDeviceSIMSlot,
     .requestGetDeviceSIMICCID = defaultRequestGetDeviceSIMICCID,
     .requestGetDeviceSIMIMSI = defaultRequestGetDeviceSIMIMSI,
     .requestGetDeviceNetISP = defaultRequestGetDeviceNetISP,
@@ -58,6 +62,8 @@ const cellMgtFrame_t default_atc_request_ops = {
     .requestSetDeviceNetWorkSearchPref = defaultRequestSetDeviceNetWorkSearchPref,
     .requestGetDeviceAtRaw = defaultRequestGetDeviceAtRaw,
     .requestGetDeviceSupportBandList = defaultRequestGetDeviceSupportBandList,
+    .requestGetDeviceLockBand = defaultRequestGetDeviceLockBand,
+    .requestSetDeviceLockBand = defaultRequestSetDeviceLockBand,
 };
 
 char *defaultRequestGetDeviceGMI(void){
@@ -272,6 +278,22 @@ char *defaultRequestGetDeviceSIMSlot(void){
     safe_at_response_free(p_response);
 
     return slot;
+}
+
+static char *defaultRequestSetDeviceSIMSlot(const char *slot){
+    char* result = "FAILURE";
+    char cmd[32] = {0};
+    ATResponse *p_response = NULL;
+    if((strcmp(slot, "1") == 0) || (strcmp(slot, "2") == 0)){
+        sprintf(cmd, "AT+QUIMSLOT=%s", slot);
+        int err = at_send_command(cmd, &p_response);
+        if (!at_response_error(err, p_response)){
+            result = "SUCCESS";
+        }
+    }
+    safe_at_response_free(p_response);
+
+    return result;
 }
 
 char *defaultRequestGetDeviceSIMICCID(void){
@@ -991,6 +1013,157 @@ static char *defaultRequestGetDeviceSupportBandList(){
                     N66, N70, N71, N75, N76, N77, N78, N79};
     
     return GET_SUPPORTED_BANDS(indices);
+}
+
+
+static char* defaultRequestGetDeviceLockBand(){
+    ATResponse *p_response = NULL;
+    char response[1024] = "\0";
+    char *tmp = NULL;
+    char *lte_band = "N/A";
+    char *nr5g_band = "N/A";
+    int err = at_send_command_singleline("AT+QNWPREFCFG=\"lte_band\"", "+QNWPREFCFG: \"lte_band\"", &p_response);
+    if (!at_response_error(err, p_response)){
+        if(at_tok_scanf(p_response->p_intermediates->line, "%s%s", NULL, &tmp) == 2){
+            lte_band = strdup(tmp);
+        }
+    }
+    safe_at_response_free(p_response);
+    err = at_send_command_singleline("AT+QNWPREFCFG=\"nr5g_band\"", "+QNWPREFCFG: \"nr5g_band\"", &p_response);
+    if (!at_response_error(err, p_response)){
+        if(at_tok_scanf(p_response->p_intermediates->line, "%s%s", NULL, &tmp) == 2){
+            nr5g_band = strdup(tmp);
+        }
+    }
+    safe_at_response_free(p_response);
+    sprintf(response, "lte_band=%s\nnr5g_band=%s", lte_band, nr5g_band);
+    return strdup(response);
+}
+
+static void removePrefix(char *str) {
+    char *src = str, *dst = str;
+    while (*src) {
+        if (*src != 'B' && *src != 'N') {
+            *dst++ = *src;
+        }
+        src++;
+    }
+    *dst = '\0';
+}
+
+void parse_bands_json(const char *json_str, char *lte_bands, char *nr5g_bands) {
+    json_error_t error;
+    json_t *root = json_loads(json_str, 0, &error);
+    if (!root) {
+        return;
+    }
+
+    lte_bands[0] = '\0';
+    nr5g_bands[0] = '\0';
+
+    json_t *lte_array = json_object_get(root, "lte bands");
+    if (json_is_array(lte_array)) {
+        size_t count = json_array_size(lte_array);
+        for (size_t i = 0; i < count; i++) {
+            json_t *item = json_array_get(lte_array, i);
+            if (json_is_string(item)) {
+                const char *band = json_string_value(item);
+                if (i > 0) {
+                    strncat(lte_bands, ":", MAX_STRING_LENGTH - strlen(lte_bands) - 1);
+                }
+                strncat(lte_bands, band, MAX_STRING_LENGTH - strlen(lte_bands) - 1);
+            }
+        }
+    }
+
+    json_t *nr5g_array = json_object_get(root, "nr5g bands");
+    if (json_is_array(nr5g_array)) {
+        size_t count = json_array_size(nr5g_array);
+        for (size_t i = 0; i < count; i++) {
+            json_t *item = json_array_get(nr5g_array, i);
+            if (json_is_string(item)) {
+                const char *band = json_string_value(item);
+                if (i > 0) {
+                    strncat(nr5g_bands, ":", MAX_STRING_LENGTH - strlen(nr5g_bands) - 1);
+                }
+                strncat(nr5g_bands, band, MAX_STRING_LENGTH - strlen(nr5g_bands) - 1);
+            }
+        }
+    }
+
+    removePrefix(lte_bands);
+    removePrefix(nr5g_bands);
+    json_decref(root);
+}
+
+
+static char *defaultRequestSetDeviceLockBand(const char *band){
+    char lte_bands[MAX_STRING_LENGTH];
+    char nr5g_bands[MAX_STRING_LENGTH];
+    char cmd[MAX_STRING_LENGTH * 2];
+    ATResponse *p_response = NULL;
+    int err = 0;
+    char *tmp_res = "Not Done";
+    char *lte_res = "Not Done";
+    char *nr5g_res = "Not Done";
+    parse_bands_json(band, lte_bands, nr5g_bands);
+    at_send_command("AT+CFUN=0",NULL);
+    if(strcasestr(lte_bands, "all") || strcasestr(nr5g_bands, "all")){
+        // at_send_command("AT+CFUN=0",NULL);
+        err = at_send_command("AT+QNWPREFCFG=\"all_band_reset\"", &p_response);
+        if (!at_response_error(err, p_response)) {
+            tmp_res = "SUCCESS";
+        }else {
+            err = at_send_command("AT+QNWPREFCFG=\"restore_band\"", &p_response);
+            if (!at_response_error(err, p_response)) {
+                tmp_res = "SUCCESS";
+            }else {
+                tmp_res = "FAILURE";
+            }
+        }
+        // at_send_command("AT+CFUN=1",NULL);
+        if(strcasestr(lte_bands, "all")){
+            lte_res = tmp_res;
+            lte_bands[0] = '\0';
+            // memset(lte_bands, 0, sizeof(lte_bands));
+        }
+        if(strcasestr(nr5g_bands, "all")){
+            nr5g_res = tmp_res;
+            nr5g_bands[0] = '\0';
+            // memset(nr5g_bands, 0, sizeof(nr5g_bands));
+        }
+
+        LOGD("lte_bands: %s, nr5g_bands: %s", lte_bands, nr5g_bands);
+    }
+    
+    if(strlen(lte_bands) > 0){
+        // at_send_command("AT+CFUN=0",NULL);
+        sprintf(cmd, "AT+QNWPREFCFG=\"lte_band\",%s", lte_bands);
+        at_response_free(p_response);
+        err = at_send_command(cmd, &p_response);
+        if (!at_response_error(err, p_response)) {
+            lte_res = "SUCCESS";
+        }else {
+            lte_res = "FAILURE";
+        }
+        // at_send_command("AT+CFUN=1",NULL);
+    }
+
+    if(strlen(nr5g_bands) > 0){
+        // at_send_command("AT+CFUN=0",NULL);
+        sprintf(cmd, "AT+QNWPREFCFG=\"nr5g_band\",%s", nr5g_bands);
+        at_response_free(p_response);
+        err = at_send_command(cmd, &p_response);
+        if (!at_response_error(err, p_response)) {
+            nr5g_res = "SUCCESS";
+        }else {
+            nr5g_res = "FAILURE";
+        }
+        // at_send_command("AT+CFUN=1",NULL);
+    }
+    at_send_command("AT+CFUN=1",NULL);
+    sprintf(cmd, "lte=%s,nr5g=%s", lte_res, nr5g_res);
+    return strdup(cmd);
 }
 
 cellMgtFrame_t createAtcRequestOps(){

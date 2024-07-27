@@ -2,15 +2,26 @@ port=`cat /var/run/cellmgt`
 cmds='ATI AT+CGDCONT? AT+CGPADDR AT+CGREG AT+CREG AT+CPIN? AT+QNETDEVCTL=1,1,1 '
 # post=$(curl -sX POST -H "Content-Type: application/json" -d "{\"iccid\": \"${iccid}\"}" http://localhost:${port}/api/set/iccid)
 
-types="gmi gmm gmr gsn temperature simstatus simslot iccid imsi simnum netisp sysinfo signal cellinfo ethernet supportband networksearchpref"
-for t in $types;do
-    get=$(curl -sX GET http://localhost:${port}/api/get/${t})
-    [ -n "$get" ] && echo "$get"
-done
+# types="gmi gmm gmr gsn temperature simstatus simslot iccid imsi simnum netisp sysinfo signal cellinfo ethernet supportband networksearchpref"
+# for t in $types;do
+#     get=$(curl -sX GET http://localhost:${port}/api/get/${t})
+#     [ -n "$get" ] && echo "$get"
+# done
 
-for c in $cmds;do
-    post=$(curl -sX POST -H "Content-Type: application/json" -d "{\"data\": \"${c}\"}" http://localhost:${port}/api/set/atraw)
-    [ -n "$post" ] && echo  "$post"
-done
-post=$(curl -sX POST -H "Content-Type: application/json" -d "{\"data\": \"NR5G\"}" http://localhost:${port}/api/set/networksearchpref)
+# for c in $cmds;do
+#     post=$(curl -sX POST -H "Content-Type: application/json" -d "{\"data\": \"${c}\"}" http://localhost:${port}/api/set/atraw)
+#     [ -n "$post" ] && echo  "$post"
+# done
+# get=$(curl -sX GET http://localhost:${port}/api/get/lockband)
+# [ -n "$get" ] && echo "$get"
+# post=$(curl -sX POST -H "Content-Type: application/json" -d "{\"data\":{\"lte bands\":[\"all\"],\"nr5g bands\":[\"all\"]}}" http://localhost:${port}/api/set/lockband)
+# [ -n "$post" ] && echo  "$post"
+# get=$(curl -sX GET http://localhost:${port}/api/get/lockband)
+# [ -n "$get" ] && echo "$get"
+
+get=$(curl -sX GET http://localhost:${port}/api/get/simslot)
+[ -n "$get" ] && echo "$get"
+post=$(curl -sX POST -H "Content-Type: application/json" -d "{\"data\":\"1\"}" http://localhost:${port}/api/set/simswitch)
 [ -n "$post" ] && echo  "$post"
+get=$(curl -sX GET http://localhost:${port}/api/get/simslot)
+[ -n "$get" ] && echo "$get"

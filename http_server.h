@@ -10,6 +10,8 @@
 #define RESPONSE_BAD_REQUEST "HTTP/1.1 400 Bad Request\r\nContent-Length: 16\r\nContent-Type: text/plain\r\n\r\nInvalid Request"
 #define RESPONSE_NOT_FOUND "HTTP/1.1 404 Not Found\r\nContent-Length: 14\r\nContent-Type: text/plain\r\n\r\nNot Found"
 #define URL_ERR_JSON "{\"err\": \"invalid url\"}"
+#define MAX_BANDS 32
+#define MAX_TOKEN_LENGTH 10
 
 typedef struct {
     uv_work_t req;
