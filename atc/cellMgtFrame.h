@@ -10,14 +10,25 @@
 #define INVALID "N/A"
 #define INVALID_IPV4 "0.0.0.0"
 #define INVALID_IPV6 "0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0"
+#define MAX_IPV4_LEN 16
+#define MAX_IPV6_LEN 40
 #define COUNT(indices) sizeof(indices) / sizeof(indices[0])
 #define GET_SUPPORTED_BANDS(indices) get_bands_by_index(indices, COUNT(indices))
+#define REQUEST_SUCCESS "SUCCESS"
+#define REQUEST_FAILURE "FAILURE"
+#define ISPAPN_JSON "apns.json"
 
 typedef struct {
     int idx; 
     const char *band; 
     const char *info;
 } band_t;
+
+typedef struct {
+    int cid;
+    char ipv4[MAX_IPV4_LEN];
+    char ipv6[MAX_IPV6_LEN];
+} ipaddress_t;
 
 typedef enum {
     SIM_ABSENT = 0,
@@ -29,6 +40,13 @@ typedef enum {
     SIM_BAD = 6,
 } SIM_Status;
 
+typedef enum {
+    NO_AUTH = 0,
+    PAP_AUTH,
+    CHAP_AUTH,
+    MSCHAPV2_AUTH,
+}auth_t;
+
 typedef struct isp{
     char *longName;
     char *shortName;
@@ -36,11 +54,11 @@ typedef struct isp{
 } isp_t;
 
 typedef enum netmode{
-NET_GSM,
-NET_WCDMA,
-NET_LTE,
-NET_NSA_NR5G,
-NET_SA_NR5G,
+    NET_GSM,
+    NET_WCDMA,
+    NET_LTE,
+    NET_NSA_NR5G,
+    NET_SA_NR5G,
 }netmode_t; 
 
 typedef struct {
@@ -104,8 +122,11 @@ typedef struct {
     char *(*requestGetDeviceSupportBandList)(void);
     char *(*requestGetDeviceLockBand)(void);
     char *(*requestSetDeviceLockBand)(const char *band);
+    char *(*requestGetDeviceIpAddress)(void); 
+    char *(*requestSetDeviceNetworkConnect)(const char *input);
 }cellMgtFrame_t;
 cellMgtFrame_t createAtcRequestOps();
 char* get_bands_by_index(int band_indices[], int count);
+int strings2auth(const char *auth);
 
 #endif // !__MM_FRAME_H__

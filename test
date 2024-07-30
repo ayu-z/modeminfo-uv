@@ -2,15 +2,19 @@ port=`cat /var/run/cellmgt`
 cmds='ATI AT+CGDCONT? AT+CGPADDR AT+CGREG AT+CREG AT+CPIN? AT+QNETDEVCTL=1,1,1 '
 # post=$(curl -sX POST -H "Content-Type: application/json" -d "{\"iccid\": \"${iccid}\"}" http://localhost:${port}/api/set/iccid)
 
-# types="gmi gmm gmr gsn temperature simstatus simslot iccid imsi simnum netisp sysinfo signal cellinfo ethernet supportband networksearchpref"
-# for t in $types;do
-#     get=$(curl -sX GET http://localhost:${port}/api/get/${t})
-#     [ -n "$get" ] && echo "$get"
+# while true;do
+    # types="gmi gmm gmr gsn temperature simstatus simslot iccid imsi simnum netisp sysinfo signal cellinfo ethernet supportband networksearchpref ipaddress"
+    # types="cellinfo"
+    # for t in $types;do
+    #     get=$(curl -sX GET http://localhost:${port}/api/get/${t})
+    #     [ -n "$get" ] && echo "$get"
+    #     # sleep 1
+    # done
 # done
 
 # for c in $cmds;do
-#     post=$(curl -sX POST -H "Content-Type: application/json" -d "{\"data\": \"${c}\"}" http://localhost:${port}/api/set/atraw)
-#     [ -n "$post" ] && echo  "$post"
+    # post=$(curl -sX POST -H "Content-Type: application/json" -d "{\"data\": \"AUTO\"}" http://localhost:${port}/api/set/networksearchpref)
+    # [ -n "$post" ] && echo  "$post"
 # done
 # get=$(curl -sX GET http://localhost:${port}/api/get/lockband)
 # [ -n "$get" ] && echo "$get"
@@ -19,9 +23,18 @@ cmds='ATI AT+CGDCONT? AT+CGPADDR AT+CGREG AT+CREG AT+CPIN? AT+QNETDEVCTL=1,1,1 '
 # get=$(curl -sX GET http://localhost:${port}/api/get/lockband)
 # [ -n "$get" ] && echo "$get"
 
-get=$(curl -sX GET http://localhost:${port}/api/get/simslot)
-[ -n "$get" ] && echo "$get"
-post=$(curl -sX POST -H "Content-Type: application/json" -d "{\"data\":\"1\"}" http://localhost:${port}/api/set/simswitch)
-[ -n "$post" ] && echo  "$post"
-get=$(curl -sX GET http://localhost:${port}/api/get/simslot)
-[ -n "$get" ] && echo "$get"
+# get=$(curl -sX GET http://localhost:${port}/api/get/simslot)
+# [ -n "$get" ] && echo "$get"
+# post=$(curl -sX POST -H "Content-Type: application/json" -d "{\"data\":\"1\"}" http://localhost:${port}/api/set/simswitch)
+# [ -n "$post" ] && echo  "$post"
+# get=$(curl -sX GET http://localhost:${port}/api/get/simslot)
+# [ -n "$get" ] && echo "$get"
+
+# post=$(curl -sX POST -H "Content-Type: application/json" -d "{\"data\":[{\"pincode\":123,\"auth\":\"abc\",\"authcfg\":{\"user\":\"123\",\"passwd\":\"124\"}},{\"cid\":1,\"apn\":\"3gnet\",\"ipv4\":1,\"ipv6\":1,\"pincode\":123,\"auth\":\"abc\",\"authcfg\":{\"user\":\"123\",\"passwd\":\"124\"}}]}" http://localhost:${port}/api/set/networkconnect)
+# [ -n "$post" ] && echo  "$post"
+
+# while true;do
+    cfg="{\"data\":{\"auth\":\"MsChapV2\",\"user\":\"1234567890\",\"passwd\":\"1234567890\"}}"
+    post=$(curl -sX POST -H "Content-Type: application/json" -d "$cfg" http://localhost:${port}/api/set/networkconnect)
+    [ -n "$post" ] && echo  "$post"
+# done

@@ -39,6 +39,8 @@ static char *defaultRequestSetDeviceNetWorkSearchPref(const char *pref);
 static char *defaultRequestGetDeviceSupportBandList(void);
 static char *defaultRequestGetDeviceLockBand(void);
 static char *defaultRequestSetDeviceLockBand(const char *band);
+static char *defaultRequestGetDeviceIpAddress(void);
+static char *defaultRequestSetDeviceNetworkConnect(const char *input);
 
 const cellMgtFrame_t default_atc_request_ops = {
     .atcRequestOpsInit = defaultAtcRequestOpsInit,
@@ -64,6 +66,8 @@ const cellMgtFrame_t default_atc_request_ops = {
     .requestGetDeviceSupportBandList = defaultRequestGetDeviceSupportBandList,
     .requestGetDeviceLockBand = defaultRequestGetDeviceLockBand,
     .requestSetDeviceLockBand = defaultRequestSetDeviceLockBand,
+    .requestGetDeviceIpAddress = defaultRequestGetDeviceIpAddress,
+    .requestSetDeviceNetworkConnect = defaultRequestSetDeviceNetworkConnect,
 };
 
 char *defaultRequestGetDeviceGMI(void){
@@ -140,6 +144,8 @@ char *defaultRequestGetDeviceTemperature(void){
     char* temp = "0";
     char *tmp = INVALID;
     ATResponse *p_response = NULL;
+    ATLine *p_cur = NULL;
+    int i = 0;
     
     int err = at_send_command_singleline("AT+TEMP", "+TEMP: \"modem-skin-usr\"", &p_response);
     if (!at_response_error(err, p_response)){
@@ -147,16 +153,30 @@ char *defaultRequestGetDeviceTemperature(void){
             temp = strdup(tmp);
     } else {
         safe_at_response_free(p_response);
-        err = at_send_command_singleline("AT+QTEMP", "+QTEMP: \"soc-thermal\"", &p_response);
+        // err = at_send_command_singleline("AT+QTEMP", "+QTEMP: \"soc-thermal\"", &p_response);
+        // if (!at_response_error(err, p_response)){
+        //     if(2 == at_tok_scanf(p_response->p_intermediates->line, "%s%s", NULL, &tmp))
+        //         temp = strdup(tmp);
+        // }else{
+        //     safe_at_response_free(p_response);
+        //     err = at_send_command_singleline("AT+QTEMP", "+QTEMP:\"cpuss-0-usr\"", &p_response);
+        //     if (!at_response_error(err, p_response)){
+        //         if(2 == at_tok_scanf(p_response->p_intermediates->line, "%s%s", NULL, &tmp))
+        //             temp = strdup(tmp);
+        //     }
+        // }
+        err = at_send_command_multiline("AT+QTEMP", "+QTEMP:", &p_response);
         if (!at_response_error(err, p_response)){
-            if(2 == at_tok_scanf(p_response->p_intermediates->line, "%s%s", NULL, &tmp))
-                temp = strdup(tmp);
-        }else{
-            safe_at_response_free(p_response);
-            err = at_send_command_singleline("AT+QTEMP", "+QTEMP:\"cpuss-0-usr\"", &p_response);
-            if (!at_response_error(err, p_response)){
-                if(2 == at_tok_scanf(p_response->p_intermediates->line, "%s%s", NULL, &tmp))
-                    temp = strdup(tmp);
+            for (i = 0, p_cur = p_response->p_intermediates; p_cur != NULL; p_cur = p_cur->p_next, i++) {
+                if(strstr(p_cur->line, "soc-thermal") 
+                || strstr(p_cur->line, "cpuss-0-usr") 
+                || strstr(p_cur->line, "modem-skin-usr") 
+                || strstr(p_cur->line, "cpu0-a7-usr")){
+                    if(2 == at_tok_scanf(p_response->p_intermediates->line, "%s%s", NULL, &tmp)){
+                        temp = strdup(tmp);
+                        break;
+                    }
+                }
             }
         }
     }
@@ -281,14 +301,16 @@ char *defaultRequestGetDeviceSIMSlot(void){
 }
 
 static char *defaultRequestSetDeviceSIMSlot(const char *slot){
-    char* result = "FAILURE";
+    if (slot == NULL) 
+        slot = "1";
+    char* result = REQUEST_FAILURE;
     char cmd[32] = {0};
     ATResponse *p_response = NULL;
     if((strcmp(slot, "1") == 0) || (strcmp(slot, "2") == 0)){
         sprintf(cmd, "AT+QUIMSLOT=%s", slot);
         int err = at_send_command(cmd, &p_response);
         if (!at_response_error(err, p_response)){
-            result = "SUCCESS";
+            result = REQUEST_SUCCESS;
         }
     }
     safe_at_response_free(p_response);
@@ -474,7 +496,7 @@ signal_t *defaultRequestGetDeviceNetSignal(void){
     // p_signal->rsrp.raw = 0;
     // p_signal->rsrq.raw = 0;
     // p_signal->sinr.raw = 0;
-
+    usleep(5000);
     int err = at_send_command_multiline("at+qeng=\"servingcell\"", "+QENG:", &p_response);
     if (!at_response_error(err, p_response)){
         for (i = 0, p_cur = p_response->p_intermediates; p_cur != NULL; p_cur = p_cur->p_next, i++) {
@@ -686,6 +708,7 @@ cellinfo_t *defaultRequestGetDeviceNetCellInfo(void){
     int dl_bandwidth;
 
     int i = 0;
+    usleep(5000);
     int err = at_send_command_multiline("at+qeng=\"servingcell\"", "+QENG:", &p_response);
     if (!at_response_error(err, p_response)){
         for (i = 0, p_cur = p_response->p_intermediates; p_cur != NULL; p_cur = p_cur->p_next, i++) {
@@ -806,7 +829,7 @@ char *defaultRequestGetDeviceNetWorkSearchPref(void){
 }
 
 char *defaultRequestSetDeviceNetWorkSearchPref(const char *pref){
-    char *result = "FAILURE";
+    char *result = REQUEST_FAILURE;
     
     if (pref == NULL || strlen(pref) == 0) {
         return result;
@@ -819,7 +842,7 @@ char *defaultRequestSetDeviceNetWorkSearchPref(const char *pref){
         sprintf(cmd, "AT+QNWPREFCFG=\"mode_pref\",%s", pref);
         err = at_send_command(cmd, &p_response);
         if (!at_response_error(err, p_response)){
-            result = "SUCCESS";
+            result = REQUEST_SUCCESS;
         }
         at_send_command("AT+CFUN=1",NULL);
     }
@@ -838,7 +861,7 @@ void defaultAtcRequestOpsInit(void){
 
 static char *defaultRequestGetDeviceAtRaw(const char *cmd){
     if( cmd == NULL) 
-        return "ERROR";
+        return REQUEST_FAILURE;
 
     int i = 0;
     ATLine *p_cur = NULL;
@@ -1098,6 +1121,10 @@ void parse_bands_json(const char *json_str, char *lte_bands, char *nr5g_bands) {
 
 
 static char *defaultRequestSetDeviceLockBand(const char *band){
+
+    if(band == NULL) 
+        return REQUEST_FAILURE;
+
     char lte_bands[MAX_STRING_LENGTH];
     char nr5g_bands[MAX_STRING_LENGTH];
     char cmd[MAX_STRING_LENGTH * 2];
@@ -1112,13 +1139,13 @@ static char *defaultRequestSetDeviceLockBand(const char *band){
         // at_send_command("AT+CFUN=0",NULL);
         err = at_send_command("AT+QNWPREFCFG=\"all_band_reset\"", &p_response);
         if (!at_response_error(err, p_response)) {
-            tmp_res = "SUCCESS";
+            tmp_res = REQUEST_SUCCESS;
         }else {
             err = at_send_command("AT+QNWPREFCFG=\"restore_band\"", &p_response);
             if (!at_response_error(err, p_response)) {
-                tmp_res = "SUCCESS";
+                tmp_res = REQUEST_SUCCESS;
             }else {
-                tmp_res = "FAILURE";
+                tmp_res = REQUEST_FAILURE;
             }
         }
         // at_send_command("AT+CFUN=1",NULL);
@@ -1142,9 +1169,9 @@ static char *defaultRequestSetDeviceLockBand(const char *band){
         at_response_free(p_response);
         err = at_send_command(cmd, &p_response);
         if (!at_response_error(err, p_response)) {
-            lte_res = "SUCCESS";
+            lte_res = REQUEST_SUCCESS;
         }else {
-            lte_res = "FAILURE";
+            lte_res = REQUEST_FAILURE;
         }
         // at_send_command("AT+CFUN=1",NULL);
     }
@@ -1155,15 +1182,173 @@ static char *defaultRequestSetDeviceLockBand(const char *band){
         at_response_free(p_response);
         err = at_send_command(cmd, &p_response);
         if (!at_response_error(err, p_response)) {
-            nr5g_res = "SUCCESS";
+            nr5g_res = REQUEST_SUCCESS;
         }else {
-            nr5g_res = "FAILURE";
+            nr5g_res = REQUEST_FAILURE;
         }
         // at_send_command("AT+CFUN=1",NULL);
     }
     at_send_command("AT+CFUN=1",NULL);
     sprintf(cmd, "lte=%s,nr5g=%s", lte_res, nr5g_res);
     return strdup(cmd);
+}
+
+
+static char *defaultRequestGetDeviceIpAddress(void){
+    int err;
+    ATResponse *p_response = NULL;
+    ATLine *p_cur = NULL;
+    json_t *root = json_object();
+    json_t *s_root = json_object();
+    json_t *array = json_array();
+    unsigned int v4Addr = 0;
+    int i = 0;
+    err = at_send_command_multiline("AT+CGPADDR", "+CGPADDR:", &p_response);
+    if (!at_response_error(err, p_response)){
+        for (p_cur = p_response->p_intermediates; p_cur != NULL; p_cur = p_cur->p_next){
+            char *ipv4 = NULL;
+            char *ipv6 = NULL;
+            int pdp = 0;
+            err = at_tok_scanf(p_cur->line, "%d%s%s", &pdp, &ipv4, &ipv6);
+            if(err >= 2) {
+                if(strstr(ipv4, INVALID_IPV4) && strstr(ipv6, INVALID_IPV6)) 
+                    continue;
+                json_object_set_new(s_root, "cid", json_integer(pdp));
+                if (ipv4) {
+                    json_object_set_new(s_root, "ipv4", json_string(ipv4));
+                }
+                if (ipv6) {
+                    json_object_set_new(s_root, "ipv6", json_string(ipv6));
+                }
+                json_array_append_new(array, s_root);
+            }
+        }
+        json_object_set_new(root, "ipaddr", array);
+    }else {
+        LOGE("Error getting IP address");
+        json_object_set_new(root, "ipaddr", (json_t*)json_string("Not Available"));
+    }
+    
+    return json_dumps(root, JSON_INDENT(0));
+}
+
+int strings2auth(const char *auth){
+    if (!strcasecmp(auth, "0") || !strcasecmp(auth, "none")) {
+        return NO_AUTH;
+    }
+    else if (!strcasecmp(auth, "1") || !strcasecmp(auth, "pap")) {
+        return PAP_AUTH;
+    }
+    else if (!strcasecmp(auth, "2") || !strcasecmp(auth, "chap")) {
+        return CHAP_AUTH;
+    }
+    else if (!strcasecmp(auth, "3") || !strcasecmp(auth, "MsChapV2")) {
+        return MSCHAPV2_AUTH;
+    }
+    else {
+        return NO_AUTH;
+    }
+}
+
+char* queryIspApn(const char *jsonfile, const char *ispcode) {
+    static char defaultapn[] = "3gnet";
+    if (ispcode == NULL || jsonfile == NULL) {
+        LOGE("Invalid input parameters");
+        return defaultapn;
+    }
+
+    json_error_t error;
+    json_t *root = json_load_file(jsonfile, 0, &error);
+    if (!root) {
+        LOGE("Error parsing JSON file: %s", error.text);
+        return defaultapn;
+    }
+
+    if (!json_is_array(root)) {
+        LOGE("Error: root is not an array");
+        json_decref(root);
+        return defaultapn;
+    }
+
+    size_t index;
+    json_t *entry;
+    json_array_foreach(root, index, entry) {
+        json_t *code = json_object_get(entry, "code");
+
+        if (!json_is_string(code)) {
+            LOGE("Error: Invalid code format in entry %zu", index);
+            continue;
+        }
+
+        if (strcasecmp(json_string_value(code), ispcode) == 0) {
+            json_t *apn = json_object_get(entry, "apn");
+            if (!json_is_string(apn)) {
+                LOGE("Error: Invalid apn format in entry %zu", index);
+                continue;
+            }
+            return strdup(json_string_value(apn));
+        }
+    }
+
+    json_decref(root);
+    return defaultapn;
+}
+
+static char* defaultRequestSetDeviceNetworkConnect(const char *input) {
+    if (input == NULL) 
+        return REQUEST_FAILURE;
+
+    LOGD("input: %s", input);
+    // sleep(1);
+
+    int err;
+    ATResponse *p_response = NULL;
+    char *ispcode = NULL;
+
+    json_error_t error;
+    json_t *root = json_loads(input, 0, &error);
+    if (!root) {
+        LOGE("Error parsing JSON: %s\n", error.text);
+        return REQUEST_FAILURE;
+    }
+
+
+    int cid = json_integer_value(json_object_get(root, "cid"));
+    char *apn = NULL;
+
+    json_t *j_apn = json_object_get(root, "apn");
+    json_t *j_auth = json_object_get(root, "auth");
+    json_t *j_user = json_object_get(root, "user");
+    json_t *j_passwd = json_object_get(root, "passwd");
+
+    cid = cid == 0? 1 : cid; 
+    if (json_is_string(j_apn) && strlen(json_string_value(j_apn)) > 0) {
+        apn = (char *)json_string_value(j_apn);
+    }else{
+        at_send_command("AT+COPS=3,2", NULL);
+        err = at_send_command_singleline("AT+COPS?", "+COPS:", &p_response);
+        if (!at_response_error(err, p_response)){
+            err = at_tok_scanf(p_response->p_intermediates->line, "%d%d%s%d", NULL, NULL, &ispcode, NULL);
+        }
+        apn = queryIspApn(ISPAPN_JSON, ispcode);    
+    }
+
+    char cmd[128] = {0};
+    sprintf(cmd, "AT+CGDCONT=%d,\"IPV4V6\",\"%s\"", cid, apn);
+    LOGD("AT+CGDCONT: %s", cmd);   
+    at_response_free(p_response);
+    err = at_send_command(cmd, &p_response);   
+    if(!at_response_error(err, p_response)){
+        LOGD("AT+CGDCONT success");
+    }
+    at_response_free(p_response);
+    sprintf(cmd, "AT+QNETDEVCTL=1,%d,%d", cid, 1);
+    err = at_send_command(cmd, &p_response);   
+    if(!at_response_error(err, p_response)){
+        LOGD("AT+QNETDEVCTL success");
+    }
+
+    return strdup(REQUEST_SUCCESS);
 }
 
 cellMgtFrame_t createAtcRequestOps(){

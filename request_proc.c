@@ -30,58 +30,75 @@ static json_t *pack_sysinfo_json(sysinfo_t *sys) {
     return root;
 }
 
+
+
 static json_t *pack_signal_json(signal_t *sig) {
     json_t *root = json_object();
     json_t *sig_obj = json_object();
+    char fmtdouble2[6] = {0};
     json_object_set_new(root, "nettype", json_string(sig->netType));
     if(strstr(sig->netType, "LTE")){
         json_object_set_new(sig_obj, "rssi raw", json_integer(sig->lte_rssi.raw));
-        json_object_set_new(sig_obj, "rssi pct", json_real(sig->lte_rssi.pct));
+        sprintf(fmtdouble2, "%.2f", sig->lte_rssi.pct);
+        json_object_set_new(sig_obj, "rssi pct", json_string(fmtdouble2));
         json_object_set_new(sig_obj, "rssi lv", json_string(sig->lte_rssi.level));
         json_object_set_new(sig_obj, "rsrq raw", json_integer(sig->lte_rsrq.raw));
-        json_object_set_new(sig_obj, "rsrq pct", json_real(sig->lte_rsrq.pct));
+        sprintf(fmtdouble2, "%.2f", sig->lte_rsrq.pct);
+        json_object_set_new(sig_obj, "rsrq pct", json_string(fmtdouble2));
         json_object_set_new(sig_obj, "rsrq lv", json_string(sig->lte_rsrq.level));
         json_object_set_new(sig_obj, "rsrp raw", json_integer(sig->lte_rsrp.raw));
-        json_object_set_new(sig_obj, "rsrp pct", json_real(sig->lte_rsrp.pct));
+        sprintf(fmtdouble2, "%.2f", sig->lte_rsrp.pct);
+        json_object_set_new(sig_obj, "rsrp pct", json_string(fmtdouble2));
         json_object_set_new(sig_obj, "rsrp lv", json_string(sig->lte_rsrp.level));
         json_object_set_new(sig_obj, "sinr raw", json_integer(sig->lte_sinr.raw));
-        json_object_set_new(sig_obj, "sinr pct", json_real(sig->lte_sinr.pct));
+        sprintf(fmtdouble2, "%.2f", sig->lte_sinr.pct);
+        json_object_set_new(sig_obj, "sinr pct", json_string(fmtdouble2));
         json_object_set_new(sig_obj, "sinr lv", json_string(sig->lte_sinr.level));
         
     }
     else if (strstr(sig->netType, "NSA")) {
         json_object_set_new(sig_obj, "nr5g rsrq raw", json_integer(sig->nr5g_rsrq.raw));
-        json_object_set_new(sig_obj, "nr5g rsrq pct", json_real(sig->nr5g_rsrq.pct));
+        sprintf(fmtdouble2, "%.2f", sig->nr5g_rsrq.pct);
+        json_object_set_new(sig_obj, "nr5g rsrq pct", json_string(fmtdouble2));
         json_object_set_new(sig_obj, "nr5g rsrq lv", json_string(sig->nr5g_rsrq.level));
         json_object_set_new(sig_obj, "nr5g rsrp raw", json_integer(sig->nr5g_rsrp.raw));
-        json_object_set_new(sig_obj, "nr5g rsrp pct", json_real(sig->nr5g_rsrp.pct));
+        sprintf(fmtdouble2, "%.2f", sig->nr5g_rsrp.pct);
+        json_object_set_new(sig_obj, "nr5g rsrp pct", json_string(fmtdouble2));
         json_object_set_new(sig_obj, "nr5g rsrp lv", json_string(sig->nr5g_rsrp.level));
         json_object_set_new(sig_obj, "nr5g sinr raw", json_integer(sig->nr5g_sinr.raw));
-        json_object_set_new(sig_obj, "nr5g sinr pct", json_real(sig->nr5g_sinr.pct));
+        sprintf(fmtdouble2, "%.2f", sig->nr5g_sinr.pct);
+        json_object_set_new(sig_obj, "nr5g sinr pct", json_string(fmtdouble2));
         json_object_set_new(sig_obj, "nr5g sinr lv", json_string(sig->nr5g_sinr.level));
         
     }
     else if (strstr(sig->netType, "SA")) {
         json_object_set_new(sig_obj, "lte rssi raw", json_integer(sig->lte_rssi.raw));
-        json_object_set_new(sig_obj, "lte rssi pct", json_real(sig->lte_rssi.pct));
+        sprintf(fmtdouble2, "%.2f", sig->lte_rssi.pct);
+        json_object_set_new(sig_obj, "lte rssi pct", json_string(fmtdouble2));
         json_object_set_new(sig_obj, "lte rssi lv", json_string(sig->lte_rssi.level));
         json_object_set_new(sig_obj, "lte rsrq raw", json_integer(sig->lte_rsrq.raw));
-        json_object_set_new(sig_obj, "lte rsrq pct", json_real(sig->lte_rsrq.pct));
+         sprintf(fmtdouble2, "%.2f", sig->lte_rsrq.pct);
+        json_object_set_new(sig_obj, "lte rsrq pct", json_string(fmtdouble2));
         json_object_set_new(sig_obj, "lte rsrq lv", json_string(sig->lte_rsrq.level));
         json_object_set_new(sig_obj, "lte rsrp raw", json_integer(sig->lte_rsrp.raw));
-        json_object_set_new(sig_obj, "lte rsrp pct", json_real(sig->lte_rsrp.pct));
+        sprintf(fmtdouble2, "%.2f", sig->lte_rsrp.pct);
+        json_object_set_new(sig_obj, "lte rsrp pct", json_string(fmtdouble2));
         json_object_set_new(sig_obj, "lte rsrp lv", json_string(sig->lte_rsrp.level));
         json_object_set_new(sig_obj, "lte sinr raw", json_integer(sig->lte_sinr.raw));
-        json_object_set_new(sig_obj, "lte sinr pct", json_real(sig->lte_sinr.pct));
+        sprintf(fmtdouble2, "%.2f", sig->lte_sinr.pct);
+        json_object_set_new(sig_obj, "lte sinr pct", json_string(fmtdouble2));
         json_object_set_new(sig_obj, "lte sinr lv", json_string(sig->lte_sinr.level));
         json_object_set_new(sig_obj, "nr5g rsrq raw", json_integer(sig->nr5g_rsrq.raw));
-        json_object_set_new(sig_obj, "nr5g rsrq pct", json_real(sig->nr5g_rsrq.pct));
+        sprintf(fmtdouble2, "%.2f", sig->nr5g_rsrq.pct);
+        json_object_set_new(sig_obj, "nr5g rsrq pct", json_string(fmtdouble2));
         json_object_set_new(sig_obj, "nr5g rsrq lv", json_string(sig->nr5g_rsrq.level));
         json_object_set_new(sig_obj, "nr5g rsrp raw", json_integer(sig->nr5g_rsrp.raw));
-        json_object_set_new(sig_obj, "nr5g rsrp pct", json_real(sig->nr5g_rsrp.pct));
+        sprintf(fmtdouble2, "%.2f", sig->nr5g_rsrp.pct);
+        json_object_set_new(sig_obj, "nr5g rsrp pct", json_string(fmtdouble2));
         json_object_set_new(sig_obj, "nr5g rsrp lv", json_string(sig->nr5g_rsrp.level));
         json_object_set_new(sig_obj, "nr5g sinr raw", json_integer(sig->nr5g_sinr.raw));
-        json_object_set_new(sig_obj, "nr5g sinr pct", json_real(sig->nr5g_sinr.pct));
+        sprintf(fmtdouble2, "%.2f", sig->nr5g_sinr.pct);
+        json_object_set_new(sig_obj, "nr5g sinr pct", json_string(fmtdouble2));
         json_object_set_new(sig_obj, "nr5g sinr lv", json_string(sig->nr5g_sinr.level));
     }else {
         json_object_set_new(sig_obj, "status", json_string("invalid data"));
@@ -220,6 +237,7 @@ static json_t *pack_atraw_json(const char *input) {
 #endif
 
 static json_t *pack_atraw_json(const char *input) {
+    LOGD("%s : ipput = %s\n", __func__, input);
     if (input == NULL) {
         LOGE("Input is NULL\n");
         return NULL;
@@ -242,6 +260,10 @@ static json_t *pack_atraw_json(const char *input) {
     return s_root;
 }
 
+static json_t *pack_ip_json(const char *input) {
+    return json_loads(input, 0, NULL);
+}
+
 void proc_get_request(app_sched_t* work) {
     url_handler_t handlers[] = {
         {"netisp", (void* (*)())cmf.requestGetDeviceNetISP, (json_t* (*)(void *))pack_isp_json},
@@ -262,6 +284,8 @@ void proc_get_request(app_sched_t* work) {
         {"supportband", (void* (*)())cmf.requestGetDeviceSupportBandList, (json_t* (*)(void *))pack_band_json},
         {"networksearchpref", (void* (*)())cmf.requestGetDeviceNetWorkSearchPref, NULL},
         {"lockband", (void* (*)())cmf.requestGetDeviceLockBand, (json_t* (*)(void *))pack_getlockband_json},
+        {"atraw", (void* (*)(void*))cmf.requestGetDeviceAtRaw, (json_t* (*)(void *))pack_atraw_json},
+        {"ipaddress", (void* (*)())cmf.requestGetDeviceIpAddress, (json_t* (*)(void *))pack_ip_json},
         {NULL, NULL, NULL}
     };
 
@@ -282,6 +306,11 @@ void proc_get_request(app_sched_t* work) {
                         json_object_set_new(s_json, url_prefix, json_string(data ? (char *)data : "invalid url"));
                     }
                 }
+                found = 1;
+                break;
+            }else if (strcasecmp(url_prefix, "atraw") == 0) {
+                LOGD("Handle atraw request, i = %d", i);
+                s_json = pack_atraw_json(work->data);
                 found = 1;
                 break;
             }
@@ -348,10 +377,10 @@ void proc_post_request(app_sched_t* work) {
 void proc_post_request(app_sched_t* work) {
     
     url_handler_t post_handlers[] = {
-        {"atraw", (void* (*)(void*))cmf.requestGetDeviceAtRaw, (json_t* (*)(void *))pack_atraw_json},
         {"networksearchpref", (void* (*)(void*))cmf.requestSetDeviceNetWorkSearchPref, NULL},
         {"lockband", (void* (*)(void*))cmf.requestSetDeviceLockBand, (json_t* (*)(void *))pack_lockstatus_json},
         {"simswitch", (void* (*)(void*))cmf.requestSetDeviceSIMSlot, NULL},
+        {"networkconnect", (void* (*)(void*))cmf.requestSetDeviceNetworkConnect, NULL},
         {NULL, NULL, NULL}
     };
 
@@ -363,26 +392,22 @@ void proc_post_request(app_sched_t* work) {
         char *result = NULL;
         for (int i = 0; post_handlers[i].url != NULL; i++) {
             if (strcmp(post_handlers[i].url, url_prefix) == 0) {
-                if (strcasecmp(url_prefix, "atraw") == 0) {
-                    s_json = post_handlers[i].pack_handler(work->data);
-                } else {
-                    json_error_t error;
-                    json_t* root = json_loads(work->data, 0, &error);
-                    json_t* value = json_object_get(root, "data");
-                    char *json2strings = NULL;
-                    if(json_is_object(value))
-                        json2strings = json_dumps(value, JSON_INDENT(0));
-                    else if (json_is_string(value))
-                        json2strings = (char *)json_string_value(value);
-                    result = post_handlers[i].request_handler((void *)json2strings);
-                    if (post_handlers[i].pack_handler) {
-                        s_json = post_handlers[i].pack_handler(result);
-                    }else {
-                        json_object_set_new(s_json, url_prefix, json_string(result));
-                    }
-                    json_decref(root);
-                    json_decref(value);
+                json_error_t error;
+                json_t* root = json_loads(work->data, 0, &error);
+                json_t* value = json_object_get(root, "data");
+                char *json2strings = NULL;
+                if(json_is_object(value) || json_is_array(value))
+                    json2strings = json_dumps(value, JSON_INDENT(0));
+                else if (json_is_string(value))
+                    json2strings = (char *)json_string_value(value);
+                result = post_handlers[i].request_handler((void *)json2strings);
+                if (post_handlers[i].pack_handler) {
+                    s_json = post_handlers[i].pack_handler(result);
+                }else {
+                    json_object_set_new(s_json, url_prefix, json_string(result));
                 }
+                json_decref(root);
+                json_decref(value);
                 found = 1;
                 break;
             }
@@ -392,11 +417,12 @@ void proc_post_request(app_sched_t* work) {
             work->response_data = strdup("{\"err\": \"invalid url\"}");
         } else {
             work->response_data = json_dumps(s_json, JSON_INDENT(0));
-            if (s_json) json_decref(s_json);
         }
+        if (s_json) json_decref(s_json);
     } else {
         work->response_data = strdup("{\"err\": \"invalid url\"}");
     }
+
     work->response_length = strlen(work->response_data);
 }
 
